@@ -710,37 +710,73 @@ function renderSpendingLimitAlert() {
     `;
 }
 
-/**
- * Render main pie chart
- */
+/*** Render main pie chart*/
 function renderMainPieChart() {
-    const state = stateStore.getState();
-    const chartContainer = document.getElementById('chartContainer');
     const canvas = document.getElementById('mainPieChart');
     const emptyMessage = document.getElementById('emptyMainChartMessage');
-    
+
     if (!canvas) return;
-    
-    if (state.transactions.length === 0) {
-        if (emptyMessage) emptyMessage.style.display = 'flex';
+
+    // Hapus grafik sebelumnya
+    if (window.mainChart) {
+        window.mainChart.destroy();
+        window.mainChart = null;
+    }
+
+    const transactions = stateStore.getState().transactions;
+    const spending = getSpendingByCategory(transactions);
+
+    // Ambil kategori yang memiliki pengeluaran
+    const chartData = Object.values(spending).filter(
+        category => category.amount > 0
+    );
+
+    if (chartData.length === 0) {
         canvas.style.display = 'none';
+        if (emptyMessage) emptyMessage.style.display = 'flex';
         return;
     }
-    
-    if (emptyMessage) emptyMessage.style.display = 'none';
+
     canvas.style.display = 'block';
-    
-    const spending = getSpendingByCategory();
-    const labels = [];
-    const data = [];
-    const colors = [];
-    
-    Object.entries(spending).forEach(([categoryId, info]) => {
-        labels.push(info.name);
-        data.push(info.amount);
-        colors.push(info.color);
+    if (emptyMessage) emptyMessage.style.display = 'none';
+
+    window.mainChart = new Chart(canvas.getContext('2d'), {
+        type: 'pie',
+        data: {
+            labels: chartData.map(item => item.name),
+            datasets: [{
+                data: chartData.map(item => item.amount),
+                backgroundColor: chartData.map(item => item.color),
+                borderColor: '#ffffff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce(
+                                (sum, value) => sum + value, 0
+                            );
+                            const percentage = (
+                                context.parsed / total * 100
+                            ).toFixed(1);
+
+                            return `${context.label}: ${formatIDR(context.parsed)} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
     });
-    
+}
     // Destroy existing chart if it exists
     if (window.mainChart) {
         window.mainChart.destroy();
@@ -782,58 +818,50 @@ function renderMainPieChart() {
             }
         }
     });
-}
 
-/**
- * Render mini pie chart
- */
+
+/*** Render mini pie chart*/
 function renderMiniPieChart() {
-    const state = stateStore.getState();
-    const month = state.selectedMonth;
     const canvas = document.getElementById('miniPieChart');
     const emptyMessage = document.getElementById('emptyMiniChartMessage');
-    
+
     if (!canvas) return;
-    
-    const monthlyTransactions = getMonthlyTransactions(month.year, month.month);
-    
-    if (monthlyTransactions.length === 0) {
-        if (emptyMessage) emptyMessage.style.display = 'flex';
-        canvas.style.display = 'none';
-        return;
-    }
-    
-    if (emptyMessage) emptyMessage.style.display = 'none';
-    canvas.style.display = 'block';
-    
-    const spending = getSpendingByCategory(monthlyTransactions);
-    const labels = [];
-    const data = [];
-    const colors = [];
-    
-    Object.entries(spending).forEach(([categoryId, info]) => {
-        if (info.amount > 0) {
-            labels.push(info.name);
-            data.push(info.amount);
-            colors.push(info.color);
-        }
-    });
-    
-    // Destroy existing chart if it exists
+
+    // Hapus grafik sebelumnya
     if (window.miniChart) {
         window.miniChart.destroy();
+        window.miniChart = null;
     }
-    
-    const ctx = canvas.getContext('2d');
-    window.miniChart = new Chart(ctx, {
+
+    const state = stateStore.getState();
+    const { year, month } = state.selectedMonth;
+
+    // Hanya mengambil transaksi pada bulan yang dipilih
+    const transactions = getMonthlyTransactions(year, month);
+    const spending = getSpendingByCategory(transactions);
+
+    const chartData = Object.values(spending).filter(
+        category => category.amount > 0
+    );
+
+    if (chartData.length === 0) {
+        canvas.style.display = 'none';
+        if (emptyMessage) emptyMessage.style.display = 'flex';
+        return;
+    }
+
+    canvas.style.display = 'block';
+    if (emptyMessage) emptyMessage.style.display = 'none';
+
+    window.miniChart = new Chart(canvas.getContext('2d'), {
         type: 'pie',
         data: {
-            labels: labels,
+            labels: chartData.map(item => item.name),
             datasets: [{
-                data: data,
-                backgroundColor: colors,
-                borderColor: '#fff',
-                borderWidth: 1
+                data: chartData.map(item => item.amount),
+                backgroundColor: chartData.map(item => item.color),
+                borderColor: '#ffffff',
+                borderWidth: 2
             }]
         },
         options: {
@@ -841,22 +869,24 @@ function renderMiniPieChart() {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
+                    display: true,
                     position: 'bottom',
                     labels: {
                         padding: 10,
-                        usePointStyle: true,
-                        font: {
-                            size: 12
-                        }
+                        usePointStyle: true
                     }
                 },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const amount = formatIDR(context.parsed);
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.parsed / total) * 100).toFixed(1);
-                            return `${context.label}: ${amount} (${percentage}%)`;
+                            const total = context.dataset.data.reduce(
+                                (sum, value) => sum + value, 0
+                            );
+                            const percentage = (
+                                context.parsed / total * 100
+                            ).toFixed(1);
+
+                            return `${context.label}: ${formatIDR(context.parsed)} (${percentage}%)`;
                         }
                     }
                 }
