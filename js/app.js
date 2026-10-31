@@ -606,20 +606,23 @@ function renderSpendingLimitAlert() {
 }
 
 
-// ==========================================
-// 10. PIE CHART HELPER
-// ==========================================
 
 function renderPieChart(canvasId, emptyMessageId, transactions, chartType) {
     const canvas = document.getElementById(canvasId);
     const emptyMessage = document.getElementById(emptyMessageId);
 
     if (!canvas) {
-        console.error(`Canvas ${canvasId} tidak ditemukan.`);
+        console.error(`Canvas dengan ID "${canvasId}" tidak ditemukan.`);
         return null;
     }
 
-    // Destroy previous chart
+    // Pastikan Chart.js tersedia
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js belum berhasil dimuat.');
+        return null;
+    }
+
+    // Hapus chart sebelumnya
     if (chartType === 'main' && mainChart) {
         mainChart.destroy();
         mainChart = null;
@@ -630,12 +633,24 @@ function renderPieChart(canvasId, emptyMessageId, transactions, chartType) {
         miniChart = null;
     }
 
+    // Pastikan transaksi berbentuk array
+    if (!Array.isArray(transactions)) {
+        console.error('Data transaksi bukan array:', transactions);
+        return null;
+    }
+
+    // Ambil data pengeluaran berdasarkan kategori
     const spending = getSpendingByCategory(transactions);
+    console.log("Transactions:", transactions);
+    console.log("Categories:", getCategories());
+    console.log("Spending by category:", spending);
+    console.log(`Data chart (${chartType}):`, spending);
 
-    const chartData = Object.values(spending).filter(
-        category => category.amount > 0
-    );
+    const chartData = Object.values(spending).filter(category => {
+        return Number(category.amount) > 0;
+    });
 
+    // Jika belum ada data
     if (chartData.length === 0) {
         canvas.style.display = 'none';
 
@@ -652,40 +667,36 @@ function renderPieChart(canvasId, emptyMessageId, transactions, chartType) {
         emptyMessage.style.display = 'none';
     }
 
-    if (typeof Chart === 'undefined') {
-        console.error('Chart.js belum berhasil dimuat.');
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+        console.error('Canvas context tidak dapat dibuat.');
         return null;
     }
 
-    return new Chart(canvas.getContext('2d'), {
+    const chart = new Chart(context, {
         type: 'pie',
-
         data: {
             labels: chartData.map(item => item.name),
-
             datasets: [{
-                data: chartData.map(item => item.amount),
-                backgroundColor: chartData.map(item => item.color),
+                data: chartData.map(item => Number(item.amount)),
+                backgroundColor: chartData.map(item => item.color || '#999999'),
                 borderColor: '#ffffff',
                 borderWidth: 2
             }]
         },
-
         options: {
             responsive: true,
             maintainAspectRatio: false,
-
             plugins: {
                 legend: {
                     display: true,
                     position: 'bottom',
-
                     labels: {
                         padding: 15,
                         usePointStyle: true
                     }
                 },
-
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -694,9 +705,9 @@ function renderPieChart(canvasId, emptyMessageId, transactions, chartType) {
                                 0
                             );
 
-                            const percentage = (
-                                context.parsed / total * 100
-                            ).toFixed(1);
+                            const percentage = total > 0
+                                ? ((context.parsed / total) * 100).toFixed(1)
+                                : 0;
 
                             return `${context.label}: ${formatIDR(context.parsed)} (${percentage}%)`;
                         }
@@ -705,7 +716,10 @@ function renderPieChart(canvasId, emptyMessageId, transactions, chartType) {
             }
         }
     });
+
+    return chart;
 }
+
 
 
 // ==========================================
