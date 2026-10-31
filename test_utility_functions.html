@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Utility Functions Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #4ECDC4;
+            padding-bottom: 10px;
+        }
+        .test-case {
+            background: #f9f9f9;
+            padding: 12px;
+            margin: 10px 0;
+            border-left: 4px solid #4ECDC4;
+        }
+        .test-case strong {
+            color: #333;
+        }
+        .result {
+            color: #2ecc71;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .error {
+            color: #e74c3c;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Utility Functions Test Suite</h1>
+        
+        <div id="testResults"></div>
+    </div>
+
+    <!-- Load the app.js which contains our utility functions -->
+    <script src="js/app.js"></script>
+    
+    <script>
+        const results = [];
+        
+        // Test 1: generateId()
+        console.log('Testing generateId()...');
+        const id1 = generateId();
+        const id2 = generateId();
+        results.push({
+            name: 'generateId()',
+            tests: [
+                { desc: 'Returns string', pass: typeof id1 === 'string' },
+                { desc: 'Starts with "txn_"', pass: id1.startsWith('txn_') },
+                { desc: 'IDs are unique', pass: id1 !== id2 },
+                { desc: 'Format example', value: id1 }
+            ]
+        });
+        
+        // Test 2: formatIDR()
+        console.log('Testing formatIDR()...');
+        results.push({
+            name: 'formatIDR(amount)',
+            tests: [
+                { desc: 'formatIDR(125000)', value: formatIDR(125000) },
+                { desc: 'formatIDR(1250000)', value: formatIDR(1250000) },
+                { desc: 'formatIDR(0)', value: formatIDR(0) },
+                { desc: 'Starts with "Rp"', pass: formatIDR(100000).startsWith('Rp') }
+            ]
+        });
+        
+        // Test 3: getCurrentDate()
+        console.log('Testing getCurrentDate()...');
+        const date = getCurrentDate();
+        results.push({
+            name: 'getCurrentDate()',
+            tests: [
+                { desc: 'Current date', value: date },
+                { desc: 'Format matches YYYY-MM-DD', pass: /^\d{4}-\d{2}-\d{2}$/.test(date) }
+            ]
+        });
+        
+        // Test 4: getCurrentTime()
+        console.log('Testing getCurrentTime()...');
+        const time = getCurrentTime();
+        results.push({
+            name: 'getCurrentTime()',
+            tests: [
+                { desc: 'Current time', value: time },
+                { desc: 'Format matches HH:MM', pass: /^\d{2}:\d{2}$/.test(time) }
+            ]
+        });
+        
+        // Test 5: parseMonth()
+        console.log('Testing parseMonth()...');
+        results.push({
+            name: 'parseMonth(year, month)',
+            tests: [
+                { desc: 'parseMonth(2024, 1)', value: parseMonth(2024, 1) },
+                { desc: 'parseMonth(2024, 6)', value: parseMonth(2024, 6) },
+                { desc: 'parseMonth(2024, 12)', value: parseMonth(2024, 12) },
+                { desc: 'Returns Indonesian month name', pass: parseMonth(2024, 1) === 'Januari 2024' }
+            ]
+        });
+        
+        // Test 6: getMonthKey()
+        console.log('Testing getMonthKey()...');
+        results.push({
+            name: 'getMonthKey(year, month)',
+            tests: [
+                { desc: 'getMonthKey(2024, 1)', value: getMonthKey(2024, 1) },
+                { desc: 'getMonthKey(2024, 12)', value: getMonthKey(2024, 12) },
+                { desc: 'Format matches YYYY-MM', pass: /^\d{4}-\d{2}$/.test(getMonthKey(2024, 5)) }
+            ]
+        });
+        
+        // Render results
+        const resultsDiv = document.getElementById('testResults');
+        let allPass = true;
+        
+        results.forEach(test => {
+            const testDiv = document.createElement('div');
+            const testCases = test.tests.map(t => {
+                if (t.pass === false) allPass = false;
+                return `<div class="test-case">
+                    <strong>${t.desc}</strong>
+                    ${t.pass !== undefined ? `<div class="result ${t.pass ? '' : 'error'}">${t.pass ? '✓ PASS' : '✗ FAIL'}</div>` : ''}
+                    ${t.value ? `<div class="result">${t.value}</div>` : ''}
+                </div>`;
+            }).join('');
+            
+            testDiv.innerHTML = `<h2>${test.name}</h2>${testCases}`;
+            resultsDiv.appendChild(testDiv);
+        });
+        
+        // Final result
+        const finalDiv = document.createElement('div');
+        finalDiv.className = allPass ? 'success' : 'error';
+        finalDiv.innerHTML = allPass ? 
+            '<strong>✅ All Tests Passed!</strong> Utility functions are working correctly.' :
+            '<strong>❌ Some tests failed!</strong> Check the results above.';
+        resultsDiv.appendChild(finalDiv);
+        
+        console.log('All tests completed!');
+    </script>
+</body>
+</html>
